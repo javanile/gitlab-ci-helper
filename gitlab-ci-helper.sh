@@ -75,7 +75,7 @@ create_branch () {
     curl \
         --request POST \
         --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-        "${GITLAB_PROJECT_API_URL}/repository/branches?branch=$1R&ref=$2"
+        "${GITLAB_PROJECT_API_URL}/repository/branches?branch=$1&ref=$2"
 }
 
 ##
