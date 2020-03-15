@@ -96,7 +96,7 @@ create_file () {
 }
 
 ##
-#
+# Main function
 ##
 main () {
     [[ -z "$1" ]] && error "Missing command"
