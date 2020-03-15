@@ -29,7 +29,9 @@ set -e
 SETUP_BIN=/usr/local/bin/gitlab-ci-helper
 SETUP_SRC=https://javanile.github.io/gitlab-ci-helper/gitlab-ci-helper.sh
 
-curl -sLo ${SETUP_BIN} ${SETUP_SRC}
-chmod +x ${SETUP_BIN}
+root () { [[ ${EUID} -ne 0 ]] && sudo $* || $*; }
 
-echo "Command '${SETUP_BIN}' is ready."
+root curl -sLo ${SETUP_BIN} ${SETUP_SRC}
+root chmod +x ${SETUP_BIN}
+
+echo ">>> ${SETUP_BIN} is ready."
