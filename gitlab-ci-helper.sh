@@ -35,7 +35,8 @@ usage () {
     echo "Support your CI workflow with useful macro."
     echo ""
     echo "List of available commands"
-    echo "  create:branch NAME REF   Create new branch"
+    echo "  create:branch NAME REF            Create new branch with NAME from REF"
+    echo "  create:file NAME CONTENT BRANCH   Create new file with NAME and CONTENT into BRANCH"
     echo ""
     echo "List of available options"
     echo "  -h, --help               Display this help and exit"
@@ -90,7 +91,7 @@ create_file () {
         --request POST \
         --header "Content-Type: application/json" \
         --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-        --data "{\"branch\": \"$3\", \"content\": \"$2\", \"commit_message\": \"create file $1\"}" \
+        --data "{\"branch\": \"$3\", \"content\": \"$2\", \"commit_message\": \"Create file $1\"}" \
         -s "${GITLAB_PROJECT_API_URL}/repository/files/$1"
 }
 
