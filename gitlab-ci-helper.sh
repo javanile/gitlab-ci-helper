@@ -75,7 +75,23 @@ create_branch () {
     curl \
         --request POST \
         --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-        "${GITLAB_PROJECT_API_URL}/repository/branches?branch=$1&ref=$2"
+        -s "${GITLAB_PROJECT_API_URL}/repository/branches?branch=$1&ref=$2"
+}
+
+##
+# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+##
+create_file () {
+    [[ -z "$1" ]] && error "Missing file name"
+    [[ -z "$2" ]] && error "Missing file content"
+    [[ -z "$3" ]] && error "Missing branch name"
+
+    curl \
+        --request POST \
+        --header "Content-Type: application/json" \
+        --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
+        --data "{\"branch\": \"$3\", \"content\": \"$2\", \"commit_message\": \"create file $1\"}" \
+        -s "${GITLAB_PROJECT_API_URL}/repository/files/$1"
 }
 
 ##
@@ -87,6 +103,7 @@ main () {
 
     case "$1" in
         create:branch) create_branch $2 $3 ;;
+        create:file) create_file $2 $3 $4 ;;
         *) error "Unknown command: $1" ;;
     esac
 
