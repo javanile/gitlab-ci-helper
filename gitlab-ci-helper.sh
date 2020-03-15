@@ -87,6 +87,7 @@ main () {
 
     case "$1" in
         create:branch) create_branch $2 $3 ;;
+        *) error "Unknown command: $1" ;;
     esac
 
     echo ""
