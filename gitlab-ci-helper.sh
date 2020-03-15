@@ -82,12 +82,15 @@ create_branch () {
 #
 ##
 main () {
+    [[ -z "$1" ]] && error "Missing command"
     [[ -z "${GITLAB_PRIVATE_TOKEN}" ]] && error "Missing or empty GITLAB_PRIVATE_TOKEN variable."
 
     case "$1" in
         create:branch) create_branch $2 $3 ;;
     esac
+
+    echo ""
 }
 
-##
-main
+## Entrypoint
+main "$@"
