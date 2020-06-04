@@ -26,7 +26,7 @@
 
 set -e
 
-SETUP_BIN=/usr/local/bin/gitlab-ci-helper
+SETUP_BIN=/usr/local/bin/${GITLAB_CI_HELPER:-gitlab-ci-helper}
 SETUP_SRC=https://javanile.github.io/gitlab-ci-helper/gitlab-ci-helper.sh
 
 root () { [[ ${EUID} -ne 0 ]] && sudo $* || $*; }
