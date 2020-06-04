@@ -51,7 +51,7 @@ eval set -- "${options}"
 
 while true; do
     case "$1" in
-        -v|--version) echo "gitlab-ci-helper (version ${VERSION})"; exit ;;
+        -v|--version) echo "GitLab CI Helper [0.0.1] - by Francesco Bianco <bianco@javanile.org>"; exit ;;
         -h|--help) usage; exit ;;
         --) shift; break ;;
     esac
