@@ -1,3 +1,4 @@
 .idea/
 .vscode/
+test/fixtures/gitlab-ci-helper/
 test.sh
