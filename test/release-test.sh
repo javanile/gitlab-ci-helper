@@ -3,7 +3,7 @@ set -e
 
 git config credential.helper 'cache --timeout=3600'
 git add .
-git commit -am "Release test"
+git commit -am "Release test" && true
 git push
 
 if [[ ! -d "test/fixtures/gitlab-ci-helper" ]]; then
