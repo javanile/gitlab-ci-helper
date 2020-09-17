@@ -16,3 +16,5 @@ date > RELEASE_TEST
 git add .
 git commit -am "run test"
 git push
+
+echo "[INFO] Visit this page <https://gitlab.com/javanile/gitlab-ci-helper/-/jobs>"
