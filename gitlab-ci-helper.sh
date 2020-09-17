@@ -26,7 +26,7 @@
 
 set -e
 
-VERSION=0.0.1
+VERSION=0.1.0
 GITLAB_PROJECT_API_URL="https://gitlab.com/api/v4/projects/${CI_PROJECT_NAMESPACE}%2F${CI_PROJECT_NAME}"
 
 usage () {
