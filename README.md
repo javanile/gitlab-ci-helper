@@ -1,1 +1,7 @@
-# gitlab-ci-helper
+# GitLab CI Helper
+
+## Installation
+
+```bash
+$ curl -sL https://git.io/get-gitlab-ci-helper | bash -
+```
