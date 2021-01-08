@@ -113,6 +113,22 @@ ci_create_file () {
 }
 
 ##
+# Create a new file if not exists on current branch.
+#
+# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+##
+ci_create_merge_request () {
+    [[ -z "$1" ]] && error "Missing target branch"
+    [[ -z "$2" ]] && error "Missing merge request title"
+
+    ci_curl_post "merge_requests" "{
+        \"source_branch\": \"${CI_CURRENT_BRANCH}\",
+        \"target_branch\": \"$1\",
+        \"title\": \"Create file $2\"
+    }"
+}
+
+##
 # Exit with a message
 ##
 ci_fail() {
@@ -144,6 +160,9 @@ main () {
             ;;
         create:file)
             ci_create_file $2 $3
+            ;;
+        create:merge-request|create:mr)
+            ci_create_merge_request $2 $3
             ;;
         fail)
             ci_fail
