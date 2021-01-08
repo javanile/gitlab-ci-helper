@@ -167,16 +167,14 @@ ci_create_merge_request () {
 ci_accept_merge_request () {
     [[ -z "$1" ]] && error "Missing target branch"
 
-    local iid=$(ci_curl_get "merge_requests?source_branch=${CI_CURRENT_BRANCH}&target_branch=$1" \
-        | sed -n 's|.*"iid":"\([^"]*\)".*|\1|p')
+    local merge_request=$(ci_curl_get "merge_requests?source_branch=${CI_CURRENT_BRANCH}&target_branch=$1")
+    local iid=$(echo ${merge_request} | sed -n 's|.*"iid":\([^",]*\).*|\1|p')
 
-    echo "Merge Request #${iid}"
+    [[ -z "${iid}" ]] && error "Merge request not found from '${CI_CURRENT_BRANCH}' to '$1' branch"
 
-    ci_curl_post "merge_requests" "{
-        \"source_branch\": \"${CI_CURRENT_BRANCH}\",
-        \"target_branch\": \"$1\",
-        \"title\": \"$2\"
-    }"
+    echo "Merge Request !${iid}"
+
+    ci_curl_put "merge_requests/${iid}/merge"
 }
 
 ##
@@ -203,6 +201,7 @@ ci_info() {
 ##
 main () {
     [[ -z "$1" ]] && error "Missing command"
+    [[ -z "${CI_PROJECT_PATH}" ]] && error "Missing or empty CI_PROJECT_PATH variable."
     [[ -z "${GITLAB_PRIVATE_TOKEN}" ]] && error "Missing or empty GITLAB_PRIVATE_TOKEN variable."
 
     case "$1" in

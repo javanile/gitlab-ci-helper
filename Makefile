@@ -8,5 +8,12 @@ push:
 	git commit -am "push"
 	git push
 
+
+## -------
+## Testing
+## -------
 test: push
 	bash test/release-test.sh
+
+test-accept-merge-request:
+	bash test/accept-merge-request-test.sh
