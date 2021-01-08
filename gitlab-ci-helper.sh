@@ -74,44 +74,67 @@ error() {
 # Call CURL POST request to GitLab API.
 ##
 ci_curl_get() {
+    CI_CURL_HTTP_STATUS=200
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
     echo "GET ${url}"
     curl -XGET -fsSL ${url} \
          -H "Content-Type: application/json" \
-         -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" && true
+         -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" 2> CI_CURL_ERROR && true
 
-    [[ "$?" = "22" ]] && echo "Exit was ignored by idempotent mode"
+    [[ "$?" = "22" ]] && ci_curl_ignore_error || ci_curl_error
 }
 
 ##
 # Call CURL POST request to GitLab API.
 ##
 ci_curl_post() {
+    CI_CURL_HTTP_STATUS=200
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
     echo "POST ${url}"
     curl -XPOST -fsSL ${url} \
          -H "Content-Type: application/json" \
          -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-         --data "$2" && true
+         --data "$2" 2> CI_CURL_ERROR && true
 
-    [[ "$?" = "22" ]] && echo "Exit was ignored by idempotent mode"
+    [[ "$?" = "22" ]] && ci_curl_ignore_error || ci_curl_error
 }
 
 ##
 # Call CURL POST request to GitLab API.
 ##
 ci_curl_put() {
+    CI_CURL_HTTP_STATUS=200
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
     echo "PUT ${url}"
     curl -XPUT -fsSL ${url} \
          -H "Content-Type: application/json" \
          -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-         --data "$2" && true 2> a
+         --data "$2" 2> CI_CURL_ERROR && true
 
-    [[ "$?" = "22" ]] && echo "Exit was ignored by idempotent mode"
+    [[ "$?" = "22" ]] && ci_curl_ignore_error || ci_curl_error
+}
+
+##
+# Call CURL POST request to GitLab API.
+##
+ci_curl_ignore_error() {
+    cat CI_CURL_ERROR
+    CI_CURL_HTTP_STATUS=$(awk 'END {print $NF}' CI_CURL_ERROR)
+    echo "CI_CURL_HTTP_STATUS=${CI_CURL_HTTP_STATUS}"
+    rm CI_CURL_ERROR
+    echo "Exit was ignored by idempotent mode"
+}
+
+##
+# Call CURL POST request to GitLab API.
+##
+ci_curl_error() {
+    cat CI_CURL_ERROR
+    rm CI_CURL_ERROR
+    exit 1
 }
 
 ##
@@ -167,7 +190,7 @@ ci_create_merge_request () {
 ci_accept_merge_request () {
     [[ -z "$1" ]] && error "Missing target branch"
 
-    local merge_request=$(ci_curl_get "merge_requests?source_branch=${CI_CURRENT_BRANCH}&target_branch=$1")
+    local merge_request=$(ci_curl_get "merge_requests?state=opened&source_branch=${CI_CURRENT_BRANCH}&target_branch=$1")
     local iid=$(echo ${merge_request} | sed -n 's|.*"iid":\([^",]*\).*|\1|p')
 
     [[ -z "${iid}" ]] && error "Merge request not found from '${CI_CURRENT_BRANCH}' to '$1' branch"
@@ -175,6 +198,8 @@ ci_accept_merge_request () {
     echo "Merge Request !${iid}"
 
     ci_curl_put "merge_requests/${iid}/merge"
+
+    [[ "${CI_CURL_HTTP_STATUS}" = "406" ]] && error "Accepting merge request fails, please perform manual operation."
 }
 
 ##
