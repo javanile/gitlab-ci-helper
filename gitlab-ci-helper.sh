@@ -63,7 +63,7 @@ while true; do
 done
 
 ##
-#
+# Print-out error message and exit.
 ##
 error() {
     echo "ERROR --> $1"
@@ -71,18 +71,22 @@ error() {
 }
 
 ##
-#
+# Call CURL POST request to GitLab API.
 ##
 ci_curl_post() {
-    curl \
-        -XPOST \
-        -fsSL "${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1" \
-        -H "Content-Type: application/json" \
-        -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-        --data "$2"
+    local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
+
+    echo "POST ${url}"
+
+    curl -XPOST -fsSL ${url} \
+         -H "Content-Type: application/json" \
+         -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
+         --data "$2"
 }
 
 ##
+# Create a new branch if not exists based on current branch.
+#
 # Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
 ##
 ci_create_branch () {
@@ -93,12 +97,14 @@ ci_create_branch () {
 }
 
 ##
+# Create a new file if not exists on current branch.
+#
 # Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
 ##
 ci_create_file () {
     [[ -z "$1" ]] && error "Missing file name"
     [[ -z "$2" ]] && error "Missing file content"
-    [[ -z "$3" ]] && error "Missing branch name"
+    #[[ -z "$3" ]] && error "Missing branch name"
 
     ci_curl_post "repository/files/$1" "{
         \"branch\": \"${CI_CURRENT_BRANCH}\",
@@ -108,7 +114,7 @@ ci_create_file () {
 }
 
 ##
-#
+# Exit with a message
 ##
 ci_fail() {
     echo "================"
@@ -119,7 +125,7 @@ ci_fail() {
 }
 
 ##
-#
+# Print-out useful information.
 ##
 ci_info() {
     echo "CI_CURRENT_PROJECT_SLUG=${CI_CURRENT_PROJECT_SLUG}"
