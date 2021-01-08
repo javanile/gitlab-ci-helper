@@ -73,11 +73,40 @@ error() {
 ##
 # Call CURL POST request to GitLab API.
 ##
+ci_curl_get() {
+    local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
+
+    echo "GET ${url}"
+    curl -XGET -fsSL ${url} \
+         -H "Content-Type: application/json" \
+         -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" && true
+
+    [[ "$?" = "22" ]] && echo "Exit was ignored by idempotent mode"
+}
+
+##
+# Call CURL POST request to GitLab API.
+##
 ci_curl_post() {
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
     echo "POST ${url}"
     curl -XPOST -fsSL ${url} \
+         -H "Content-Type: application/json" \
+         -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
+         --data "$2" && true
+
+    [[ "$?" = "22" ]] && echo "Exit was ignored by idempotent mode"
+}
+
+##
+# Call CURL POST request to GitLab API.
+##
+ci_curl_put() {
+    local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
+
+    echo "PUT ${url}"
+    curl -XPUT -fsSL ${url} \
          -H "Content-Type: application/json" \
          -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
          --data "$2" && true
@@ -131,6 +160,24 @@ ci_create_merge_request () {
 }
 
 ##
+# Accept merge request.
+#
+# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+##
+ci_accept_merge_request () {
+    [[ -z "$1" ]] && error "Missing target branch"
+    [[ -z "$2" ]] && error "Missing merge request title"
+
+    ci_curl_get "merge_requests?source_branch=${CI_CURRENT_BRANCH}&target_branch=$1"
+
+    ci_curl_post "merge_requests" "{
+        \"source_branch\": \"${CI_CURRENT_BRANCH}\",
+        \"target_branch\": \"$1\",
+        \"title\": \"$2\"
+    }"
+}
+
+##
 # Exit with a message
 ##
 ci_fail() {
@@ -164,6 +211,9 @@ main () {
             ci_create_file "$2" "$3"
             ;;
         create:merge-request|create:mr)
+            ci_create_merge_request "$2" "$3"
+            ;;
+        accept:merge-request|accept:mr)
             ci_create_merge_request "$2" "$3"
             ;;
         fail)
