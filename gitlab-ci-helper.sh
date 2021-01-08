@@ -167,7 +167,10 @@ ci_create_merge_request () {
 ci_accept_merge_request () {
     [[ -z "$1" ]] && error "Missing target branch"
 
-    ci_curl_get "merge_requests?source_branch=${CI_CURRENT_BRANCH}&target_branch=$1"
+    local iid=$(ci_curl_get "merge_requests?source_branch=${CI_CURRENT_BRANCH}&target_branch=$1" \
+        | sed -n 's|.*"iid":"\([^"]*\)".*|\1|p')
+
+    echo "Merge Request #${iid}"
 
     ci_curl_post "merge_requests" "{
         \"source_branch\": \"${CI_CURRENT_BRANCH}\",
