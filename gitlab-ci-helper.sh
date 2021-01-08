@@ -27,7 +27,9 @@
 set -e
 
 VERSION=0.1.0
-GITLAB_PROJECT_API_URL="https://gitlab.com/api/v4/projects/${CI_PROJECT_NAMESPACE}%2F${CI_PROJECT_NAME}"
+GITLAB_PROJECTS_API_URL="https://gitlab.com/api/v4/projects/${CI_PROJECT_NAMESPACE}%2F${CI_PROJECT_NAME}"
+CI_CURRENT_PROJECT_SLUG="${CI_PROJECT_PATH//\//%2F}"
+CI_CURRENT_BRANCH="${CI_COMMIT_BRANCH}"
 
 usage () {
     echo "Usage: ./gitlab-ci-helper.sh [OPTION]... [COMMAND] [ARGUMENT]..."
@@ -35,10 +37,12 @@ usage () {
     echo "Support your CI workflow with useful macro."
     echo ""
     echo "List of available commands"
-    echo "  create:branch NAME REF            Create new branch with NAME from REF"
-    echo "  create:file NAME CONTENT BRANCH   Create new file with NAME and CONTENT into BRANCH"
+    echo "  create:branch NAME REF        Create new branch with NAME from REF"
+    echo "  create:file NAME CONTENT      Create new file with NAME and CONTENT into BRANCH"
+    echo "  info                          Create new file with NAME and CONTENT into BRANCH"
     echo ""
     echo "List of available options"
+    echo "  -b, --branch BRANCH      Set current branch"
     echo "  -h, --help               Display this help and exit"
     echo "  -v, --version            Display current version"
     echo ""
@@ -61,38 +65,65 @@ done
 ##
 #
 ##
-error () {
+error() {
     echo "ERROR --> $1"
     exit 1
 }
 
 ##
-# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+#
 ##
-create_branch () {
-    [[ -z "$1" ]] && error "Missing new branch name"
-    [[ -z "$2" ]] && error "Missing branch ref"
-
+ci_curl_post() {
     curl \
-        --request POST \
-        --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-        -s "${GITLAB_PROJECT_API_URL}/repository/branches?branch=$1&ref=$2"
+        -XPOST \
+        -fsSL "${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1" \
+        -H "Content-Type: application/json" \
+        -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
+        --data "$2"
 }
 
 ##
 # Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
 ##
-create_file () {
+ci_create_branch () {
+    [[ -z "$1" ]] && error "Missing new branch name"
+    [[ -z "$2" ]] && local ref="${CI_CURRENT_BRANCH}" || local ref="$2"
+
+    ci_curl_post "repository/branches?branch=$1&ref=${ref}"
+}
+
+##
+# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+##
+ci_create_file () {
     [[ -z "$1" ]] && error "Missing file name"
     [[ -z "$2" ]] && error "Missing file content"
     [[ -z "$3" ]] && error "Missing branch name"
 
-    curl \
-        --request POST \
-        --header "Content-Type: application/json" \
-        --header "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-        --data "{\"branch\": \"$3\", \"content\": \"$2\", \"commit_message\": \"Create file $1\"}" \
-        -s "${GITLAB_PROJECT_API_URL}/repository/files/$1"
+    ci_curl_post "repository/files/$1" "{
+        \"branch\": \"${CI_CURRENT_BRANCH}\",
+        \"content\": \"$2\",
+        \"commit_message\": \"Create file $1\"
+    }"
+}
+
+##
+#
+##
+ci_fail() {
+    echo "================"
+    echo ">>>   FAIL   <<<"
+    echo "================"
+    echo "MESSAGE: $1"
+    exit 1
+}
+
+##
+#
+##
+ci_info() {
+    echo "CI_CURRENT_PROJECT_SLUG=${CI_CURRENT_PROJECT_SLUG}"
+    echo "CI_CURRENT_BRANCH=${CI_CURRENT_BRANCH}"
 }
 
 ##
@@ -103,9 +134,21 @@ main () {
     [[ -z "${GITLAB_PRIVATE_TOKEN}" ]] && error "Missing or empty GITLAB_PRIVATE_TOKEN variable."
 
     case "$1" in
-        create:branch) create_branch $2 $3 ;;
-        create:file) create_file $2 $3 $4 ;;
-        *) error "Unknown command: $1" ;;
+        create:branch)
+            ci_create_branch $2 $3
+            ;;
+        create:file)
+            ci_create_file $2 $3
+            ;;
+        fail)
+            ci_fail
+            ;;
+        info)
+            ci_info
+            ;;
+        *)
+            error "Unknown command: $1"
+            ;;
     esac
 
     echo ""
