@@ -213,7 +213,7 @@ main () {
             ci_create_merge_request "$2" "$3"
             ;;
         accept:merge-request|accept:mr)
-            ci_create_merge_request "$2" "$3"
+            ci_accept_merge_request "$2"
             ;;
         fail)
             ci_fail
