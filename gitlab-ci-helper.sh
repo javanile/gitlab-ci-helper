@@ -166,7 +166,6 @@ ci_create_merge_request () {
 ##
 ci_accept_merge_request () {
     [[ -z "$1" ]] && error "Missing target branch"
-    [[ -z "$2" ]] && error "Missing merge request title"
 
     ci_curl_get "merge_requests?source_branch=${CI_CURRENT_BRANCH}&target_branch=$1"
 
