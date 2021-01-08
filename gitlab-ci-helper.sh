@@ -82,7 +82,7 @@ ci_curl_post() {
          -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
          --data "$2" && true
 
-    echo "EXIT $?"
+    #echo "EXIT $?"
 }
 
 ##
@@ -126,7 +126,7 @@ ci_create_merge_request () {
     ci_curl_post "merge_requests" "{
         \"source_branch\": \"${CI_CURRENT_BRANCH}\",
         \"target_branch\": \"$1\",
-        \"title\": \"Create file $2\"
+        \"title\": \"$2\"
     }"
 }
 
@@ -158,13 +158,13 @@ main () {
 
     case "$1" in
         create:branch)
-            ci_create_branch $2 $3
+            ci_create_branch "$2" "$3"
             ;;
         create:file)
-            ci_create_file $2 $3
+            ci_create_file "$2" "$3"
             ;;
         create:merge-request|create:mr)
-            ci_create_merge_request $2 $3
+            ci_create_merge_request "$2" "$3"
             ;;
         fail)
             ci_fail
