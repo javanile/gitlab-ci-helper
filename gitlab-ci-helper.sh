@@ -82,7 +82,7 @@ ci_curl_post() {
          -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
          --data "$2" && true
 
-    #echo "EXIT $?"
+    [[ "$?" = "22" ]] && echo "Exit was ignored by idempotent mode"
 }
 
 ##
