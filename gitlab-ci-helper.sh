@@ -109,7 +109,7 @@ ci_curl_put() {
     curl -XPUT -fsSL ${url} \
          -H "Content-Type: application/json" \
          -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-         --data "$2" && true
+         --data "$2" && true 2> a
 
     [[ "$?" = "22" ]] && echo "Exit was ignored by idempotent mode"
 }
