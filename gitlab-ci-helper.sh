@@ -80,7 +80,9 @@ ci_curl_post() {
     curl -XPOST -fsSL ${url} \
          -H "Content-Type: application/json" \
          -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-         --data "$2"
+         --data "$2" && true
+
+    echo "EXIT $?"
 }
 
 ##

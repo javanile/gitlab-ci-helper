@@ -12,6 +12,7 @@ fi
 
 cd test/fixtures/gitlab-ci-helper
 
+git pull
 date > RELEASE_TEST
 git add .
 git commit -am "run test"
