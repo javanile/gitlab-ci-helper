@@ -9,4 +9,4 @@ push:
 	git push
 
 test: push
-	bash test/test.sh
+	bash test/release-test.sh
