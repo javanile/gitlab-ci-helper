@@ -77,7 +77,6 @@ ci_curl_post() {
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
     echo "POST ${url}"
-
     curl -XPOST -fsSL ${url} \
          -H "Content-Type: application/json" \
          -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
