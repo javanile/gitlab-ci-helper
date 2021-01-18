@@ -227,6 +227,7 @@ ci_info() {
 main () {
     [[ -z "$1" ]] && error "Missing command"
     [[ -z "${CI_PROJECT_PATH}" ]] && error "Missing or empty CI_PROJECT_PATH variable."
+    [[ -z "${GITLAB_RELEASES_STORE}" ]] && error "Missing or empty GITLAB_RELEASES_STORE variable."
     [[ -z "${GITLAB_PRIVATE_TOKEN}" ]] && error "Missing or empty GITLAB_PRIVATE_TOKEN variable."
 
     case "$1" in
