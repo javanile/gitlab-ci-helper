@@ -29,7 +29,6 @@ set -e
 VERSION=0.1.0
 GITLAB_PROJECTS_API_URL="https://gitlab.com/api/v4/projects"
 CI_CURRENT_PROJECT_SLUG="${CI_PROJECT_PATH//\//%2F}"
-CI_CURRENT_BRANCH="${CI_COMMIT_BRANCH}"
 
 usage () {
     echo "Usage: ./gitlab-ci-helper.sh [OPTION]... [COMMAND] [ARGUMENT]..."
@@ -49,12 +48,16 @@ usage () {
     echo "Documentation can be found at https://github.com/javanile/lcov.sh"
 }
 
-options=$(getopt -n gitlab-ci-helper.sh -o vh -l version,help -- "$@")
+debug=
+current_branch="${CI_COMMIT_BRANCH}"
+options=$(getopt -n gitlab-ci-helper.sh -o b:dvh -l branch:,debug,version,help -- "$@")
 
 eval set -- "${options}"
 
 while true; do
     case "$1" in
+        -d|--debug) debug=1 ;;
+        -b|--branch) shift; current_branch=$1 ;;
         -v|--version) echo "GitLab CI Helper [0.0.1] - by Francesco Bianco <bianco@javanile.org>"; exit ;;
         -h|--help) usage; exit ;;
         --) shift; break ;;
@@ -66,39 +69,51 @@ done
 # Print-out error message and exit.
 ##
 error() {
-    echo "ERROR --> $1"
+    echo "[ERROR] $1"
     exit 1
 }
 
 ##
 # Call CURL POST request to GitLab API.
 ##
-ci_curl_get() {
+ci_curl_init() {
+    CI_CURL_EXIT_CODE=
     CI_CURL_HTTP_STATUS=200
+    [[ -f CI_CURL_ERROR_MESSAGE ]] && rm -f CI_CURL_ERROR_MESSAGE || true
+}
+
+##
+# Call CURL POST request to GitLab API.
+##
+ci_curl_get() {
+    ci_curl_init
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
-    echo "GET ${url}"
+    [[ -n "${debug}" ]] && echo "GET ${url}"
+
     curl -XGET -fsSL ${url} \
          -H "Content-Type: application/json" \
-         -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" 2> CI_CURL_ERROR && true
+         -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" 2> CI_CURL_ERROR_MESSAGE && true
 
-    [[ "$?" = "22" ]] && ci_curl_ignore_error || ci_curl_error
+    ci_curl_catch $?
 }
 
 ##
 # Call CURL POST request to GitLab API.
 ##
 ci_curl_post() {
-    CI_CURL_HTTP_STATUS=200
+    ci_curl_init
+
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
-    echo "POST ${url}"
+    [[ -n "${debug}" ]] && echo "POST ${url}"
+
     curl -XPOST -fsSL ${url} \
          -H "Content-Type: application/json" \
          -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-         --data "$2" 2> CI_CURL_ERROR && true
+         --data "$2" 2> CI_CURL_ERROR_MESSAGE && true
 
-    [[ "$?" = "22" ]] && ci_curl_ignore_error || ci_curl_error
+    ci_curl_catch $?
 }
 
 ##
@@ -106,35 +121,63 @@ ci_curl_post() {
 ##
 ci_curl_put() {
     CI_CURL_HTTP_STATUS=200
+
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
-    echo "PUT ${url}"
+    [[ -n "${debug}" ]] && echo "PUT ${url}"
+
     curl -XPUT -fsSL ${url} \
          -H "Content-Type: application/json" \
          -H "PRIVATE-TOKEN: ${GITLAB_PRIVATE_TOKEN}" \
-         --data "$2" 2> CI_CURL_ERROR && true
+         --data "$2" 2> CI_CURL_ERROR_MESSAGE && true
 
-    [[ "$?" = "22" ]] && ci_curl_ignore_error || ci_curl_error
+    ci_curl_catch $?
+}
+
+##
+#
+##
+ci_curl_catch() {
+    if [[ -n "${debug}" ]]; then
+        echo "Catch curl request with exit code '$1'"
+    fi
+
+    CI_CURL_EXIT_CODE=$1
+    case "$1" in
+        0) echo "" ;;
+        22) ci_curl_catch_status ;;
+        *) ci_curl_error ;;
+    esac
 }
 
 ##
 # Call CURL POST request to GitLab API.
 ##
-ci_curl_ignore_error() {
-    cat CI_CURL_ERROR
-    CI_CURL_HTTP_STATUS=$(awk 'END {print $NF}' CI_CURL_ERROR)
-    echo "CI_CURL_HTTP_STATUS=${CI_CURL_HTTP_STATUS}"
-    rm CI_CURL_ERROR
-    echo "Exit was ignored by idempotent mode"
+ci_curl_catch_status() {
+    [[ -n "${debug}" ]] && cat CI_CURL_ERROR_MESSAGE
+    CI_CURL_HTTP_STATUS=$(awk 'END {print $NF}' CI_CURL_ERROR_MESSAGE)
+    rm -f CI_CURL_ERROR_MESSAGE
 }
 
 ##
 # Call CURL POST request to GitLab API.
 ##
 ci_curl_error() {
-    cat CI_CURL_ERROR
-    rm CI_CURL_ERROR
+    cat CI_CURL_ERROR_MESSAGE
+    rm CI_CURL_ERROR_MESSAGE
     exit 1
+}
+
+##
+# Check if branch exists
+##
+ci_check_branch () {
+    [[ -z "$1" ]] && error "Missing branch name"
+    [[ -n "${debug}" ]] && echo "Check if branch '$1' exists..."
+
+    ci_curl_get "repository/branches/$1"
+
+    [[ "${CI_CURL_HTTP_STATUS}" = "404" ]] && error "Branch '$1' was not found." || true
 }
 
 ##
@@ -144,7 +187,7 @@ ci_curl_error() {
 ##
 ci_create_branch () {
     [[ -z "$1" ]] && error "Missing new branch name"
-    [[ -z "$2" ]] && local ref="${CI_CURRENT_BRANCH}" || local ref="$2"
+    [[ -z "$2" ]] && local ref="${current_branch}" || local ref="$2"
 
     ci_curl_post "repository/branches?branch=$1&ref=${ref}"
 }
@@ -159,8 +202,10 @@ ci_create_file () {
     [[ -z "$2" ]] && error "Missing file content"
     #[[ -z "$3" ]] && error "Missing branch name"
 
+    ci_check_branch "${current_branch}"
+
     ci_curl_post "repository/files/$1" "{
-        \"branch\": \"${CI_CURRENT_BRANCH}\",
+        \"branch\": \"${current_branch}\",
         \"content\": \"$2\",
         \"commit_message\": \"Create file $1\"
     }"
@@ -176,7 +221,7 @@ ci_create_merge_request () {
     [[ -z "$2" ]] && error "Missing merge request title"
 
     ci_curl_post "merge_requests" "{
-        \"source_branch\": \"${CI_CURRENT_BRANCH}\",
+        \"source_branch\": \"${current_branch}\",
         \"target_branch\": \"$1\",
         \"title\": \"$2\"
     }"
@@ -190,10 +235,10 @@ ci_create_merge_request () {
 ci_accept_merge_request () {
     [[ -z "$1" ]] && error "Missing target branch"
 
-    local merge_request=$(ci_curl_get "merge_requests?state=opened&source_branch=${CI_CURRENT_BRANCH}&target_branch=$1")
+    local merge_request=$(ci_curl_get "merge_requests?state=opened&source_branch=${current_branch}&target_branch=$1")
     local iid=$(echo ${merge_request} | sed -n 's|.*"iid":\([^",]*\).*|\1|p')
 
-    [[ -z "${iid}" ]] && error "Merge request not found from '${CI_CURRENT_BRANCH}' to '$1' branch"
+    [[ -z "${iid}" ]] && error "Merge request not found from '${current_branch}' to '$1' branch"
 
     echo "Merge Request !${iid}"
 
@@ -217,8 +262,7 @@ ci_fail() {
 # Print-out useful information.
 ##
 ci_info() {
-    echo "CI_CURRENT_PROJECT_SLUG=${CI_CURRENT_PROJECT_SLUG}"
-    echo "CI_CURRENT_BRANCH=${CI_CURRENT_BRANCH}"
+    echo "Current branch: ${current_branch}"
 }
 
 ##
@@ -230,6 +274,9 @@ main () {
     [[ -z "${GITLAB_PRIVATE_TOKEN}" ]] && error "Missing or empty GITLAB_PRIVATE_TOKEN variable."
 
     case "$1" in
+        check:branch)
+            ci_check_branch "$2"
+            ;;
         create:branch)
             ci_create_branch "$2" "$3"
             ;;
@@ -252,8 +299,6 @@ main () {
             error "Unknown command: $1"
             ;;
     esac
-
-    echo ""
 }
 
 ## Entrypoint

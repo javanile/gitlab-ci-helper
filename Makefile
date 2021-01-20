@@ -17,3 +17,9 @@ test: push
 
 test-accept-merge-request:
 	bash test/accept-merge-request-test.sh
+
+test-check-branch:
+	@bash test/check-branch-test.sh
+
+test-create-file:
+	@bash test/create-file-test.sh
