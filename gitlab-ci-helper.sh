@@ -90,7 +90,7 @@ ci_curl_get() {
 
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
-    [[ -n "${debug}" ]] && echo "GET ${url}"
+    [[ -n "${debug}" ]] && echo " --> GET ${url}"
 
     curl -XGET -fsSL ${url} \
          -H "Content-Type: application/json" \
@@ -107,7 +107,7 @@ ci_curl_post() {
 
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
-    [[ -n "${debug}" ]] && echo "POST ${url}"
+    [[ -n "${debug}" ]] && echo " --> POST ${url}"
 
     curl -XPOST -fsSL ${url} \
          -H "Content-Type: application/json" \
@@ -125,7 +125,7 @@ ci_curl_put() {
 
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
-    [[ -n "${debug}" ]] && echo "PUT ${url}"
+    [[ -n "${debug}" ]] && echo " --> PUT ${url}"
 
     curl -XPUT -fsSL ${url} \
          -H "Content-Type: application/json" \
@@ -139,8 +139,6 @@ ci_curl_put() {
 #
 ##
 ci_curl_catch() {
-    [[ -n "${debug}" ]] && echo "Catch curl request with exit code '$1'"
-
     CI_CURL_EXIT_CODE=$1
     case "$1" in
         0)
@@ -159,6 +157,7 @@ ci_curl_catch() {
 # Call CURL POST request to GitLab API.
 ##
 ci_curl_catch_status() {
+    [[ -n "${debug}" ]] && echo "Catch curl request with exit code '$1'"
     [[ -n "${debug}" ]] && cat CI_CURL_ERROR_MESSAGE
     CI_CURL_HTTP_STATUS=$(awk 'END {print $NF}' CI_CURL_ERROR_MESSAGE)
     rm -f CI_CURL_ERROR_MESSAGE
@@ -168,6 +167,7 @@ ci_curl_catch_status() {
 # Call CURL POST request to GitLab API.
 ##
 ci_curl_error() {
+    [[ -n "${debug}" ]] && echo "Catch curl request with exit code '$1'"
     cat CI_CURL_ERROR_MESSAGE
     rm CI_CURL_ERROR_MESSAGE
     exit 1
@@ -249,7 +249,13 @@ ci_accept_merge_request () {
 
     ci_curl_put "merge_requests/${iid}/merge"
 
-    [[ "${CI_CURL_HTTP_STATUS}" = "405" ]] && ci_curl_get "merge_requests/${iid}" || true
+    if [[ "${CI_CURL_HTTP_STATUS}" = "405" ]]; then
+        [[ -d "${debug}" ]] && echo "Processing merge request status..."
+        if ci_curl_get "merge_requests/${iid}" | grep -q '"has_conflicts":true'; then
+            [[ -d "${debug}" ]] && echo "Merge request '${iid}' has conflicts"
+            CI_CURL_HTTP_STATUS=406
+        fi
+    fi
 
     [[ "${CI_CURL_HTTP_STATUS}" = "406" ]] && ci_fail "There are merge conflicts, perform manual operation." || true
 }
