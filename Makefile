@@ -15,6 +15,9 @@ push:
 test: push
 	bash test/release-test.sh
 
+test-release: push
+	bash test/release-test.sh
+
 test-accept-merge-request:
 	bash test/accept-merge-request-test.sh
 
