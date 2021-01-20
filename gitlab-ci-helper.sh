@@ -245,11 +245,11 @@ ci_accept_merge_request () {
 
     [[ -z "${iid}" ]] && error "Merge request not found from '${current_branch}' to '$1' branch"
 
-    echo "Merge Request !${iid}"
+    [[ -d "${debug}" ]] && echo "Merge Request !${iid}"
 
     ci_curl_put "merge_requests/${iid}/merge"
 
-    [[ "${CI_CURL_HTTP_STATUS}" = "406" ]] && error "Accepting merge request fails, please perform manual operation."
+    [[ "${CI_CURL_HTTP_STATUS}" = "406" ]] && fail "There are merge conflicts, perform manual operation." || true
 }
 
 ##
