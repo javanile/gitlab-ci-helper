@@ -245,14 +245,14 @@ ci_accept_merge_request () {
 
     [[ -z "${iid}" ]] && error "Merge request not found from '${current_branch}' to '$1' branch"
 
-    [[ -d "${debug}" ]] && echo "Merge Request !${iid}"
+    [[ -n "${debug}" ]] && echo "Merge Request !${iid}"
 
     ci_curl_put "merge_requests/${iid}/merge"
 
     if [[ "${CI_CURL_HTTP_STATUS}" = "405" ]]; then
-        [[ -d "${debug}" ]] && echo "Processing merge request status..."
+        [[ -n "${debug}" ]] && echo "Processing merge request status..."
         if ci_curl_get "merge_requests/${iid}" | grep -q '"has_conflicts":true'; then
-            [[ -d "${debug}" ]] && echo "Merge request '${iid}' has conflicts"
+            [[ -n "${debug}" ]] && echo "Merge request '${iid}' has conflicts"
             CI_CURL_HTTP_STATUS=406
         fi
     fi
