@@ -8,7 +8,6 @@ push:
 	git commit -am "push"
 	git push
 
-
 ## -------
 ## Testing
 ## -------
