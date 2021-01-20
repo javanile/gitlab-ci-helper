@@ -249,6 +249,8 @@ ci_accept_merge_request () {
 
     ci_curl_put "merge_requests/${iid}/merge"
 
+    [[ "${CI_CURL_HTTP_STATUS}" = "405" ]] && ci_curl_get "merge_requests/${iid}" || true
+
     [[ "${CI_CURL_HTTP_STATUS}" = "406" ]] && fail "There are merge conflicts, perform manual operation." || true
 }
 
