@@ -87,6 +87,7 @@ ci_curl_init() {
 ##
 ci_curl_get() {
     ci_curl_init
+
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
     [[ -n "${debug}" ]] && echo "GET ${url}"
@@ -138,15 +139,19 @@ ci_curl_put() {
 #
 ##
 ci_curl_catch() {
-    if [[ -n "${debug}" ]]; then
-        echo "Catch curl request with exit code '$1'"
-    fi
+    [[ -n "${debug}" ]] && echo "Catch curl request with exit code '$1'"
 
     CI_CURL_EXIT_CODE=$1
     case "$1" in
-        0) echo "" ;;
-        22) ci_curl_catch_status ;;
-        *) ci_curl_error ;;
+        0)
+            echo ""
+            ;;
+        22)
+            ci_curl_catch_status
+            ;;
+        *)
+            ci_curl_error
+            ;;
     esac
 }
 
