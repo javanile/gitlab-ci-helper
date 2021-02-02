@@ -25,3 +25,6 @@ test-check-branch:
 
 test-create-file:
 	@bash test/create-file-test.sh
+
+test-list-pipelines:
+	@bash test/list-pipelines-test.sh

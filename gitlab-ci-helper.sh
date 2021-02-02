@@ -38,6 +38,7 @@ usage () {
     echo "List of available commands"
     echo "  create:branch NAME REF        Create new branch with NAME from REF"
     echo "  create:file NAME CONTENT      Create new file with NAME and CONTENT into BRANCH"
+    echo "  list:pipelines                Create new file with NAME and CONTENT into BRANCH"
     echo "  info                          Create new file with NAME and CONTENT into BRANCH"
     echo ""
     echo "List of available options"
@@ -261,6 +262,18 @@ ci_accept_merge_request () {
 }
 
 ##
+# Accept merge request.
+#
+# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+##
+ci_list_pipelines () {
+    #[[ -z "$1" ]] && error "Missing target branch"
+    local pipelines=$(ci_curl_get "pipelines?$1")
+
+    echo ${pipelines}
+}
+
+##
 # Exit with a message
 ##
 ci_fail() {
@@ -301,6 +314,9 @@ main () {
             ;;
         accept:merge-request|accept:mr)
             ci_accept_merge_request "$2"
+            ;;
+        list:pipelines)
+            ci_list_pipelines "$2"
             ;;
         fail)
             ci_fail
