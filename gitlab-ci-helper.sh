@@ -274,6 +274,24 @@ ci_list_pipelines () {
 }
 
 ##
+# Accept merge request.
+#
+# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+##
+ci_wait_pipelines () {
+    #[[ -z "$1" ]] && error "Missing target branch"
+    local pipelines=$(ci_curl_get "pipelines?$1" | tr -d '[]' |sed 's/{"id":/|/g')
+    IFS='|' read -a pipelines_list <<<"${pipelines}"
+    for pipeline in "${pipelines_list[@]}"; do
+        [[ -z "${pipeline}" ]] && continue
+        pipeline_id=$(echo ${pipeline} | cut -d',' -f1)
+        echo "PID: ${pipeline_id}"
+    done
+
+    #    echo ${pipelines}
+}
+
+##
 # Exit with a message
 ##
 ci_fail() {
@@ -317,6 +335,9 @@ main () {
             ;;
         list:pipelines)
             ci_list_pipelines "$2"
+            ;;
+        wait:pipelines)
+            ci_wait_pipelines "$2"
             ;;
         fail)
             ci_fail

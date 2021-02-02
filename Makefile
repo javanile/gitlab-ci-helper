@@ -28,3 +28,6 @@ test-create-file:
 
 test-list-pipelines:
 	@bash test/list-pipelines-test.sh
+
+test-wait-pipelines:
+	@bash test/wait-pipelines-test.sh
