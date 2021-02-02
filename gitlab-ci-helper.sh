@@ -291,7 +291,7 @@ ci_wait_pipelines () {
             pipeline_id=$(echo ${pipeline} | cut -d',' -f1)
             pipeline_ref=$(echo ${pipeline} | cut -d'"' -f8)
             pipeline_status=$(echo ${pipeline} | cut -d'"' -f12)
-            [[ "${pipeline_id}" = "${CI_PIPELINE_ID}" ]] && continue
+            [[ "${pipeline_id}" -ge "${CI_PIPELINE_ID}" ]] && continue
             pipelines_count=$((pipelines_count + 1))
             echo "[${pipeline_ref}] Wait until the Pipeline #${pipeline_id} with status '${pipeline_status}' will be overcome..."
             sleep 5
