@@ -91,7 +91,7 @@ ci_curl_get() {
 
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
-    [[ -n "${debug}" ]] && echo " --> GET ${url}"
+    [[ -n "${debug}" ]] && [[ "$2" != "NODEBUG" ]] && echo " --> GET ${url}"
 
     curl -XGET -fsSL ${url} \
          -H "Content-Type: application/json" \
@@ -280,7 +280,7 @@ ci_list_pipelines () {
 ##
 ci_wait_pipelines () {
     #[[ -z "$1" ]] && error "Missing target branch"
-    local pipelines=$(ci_curl_get "pipelines?$1" | tr -d '[]' |sed 's/{"id":/|/g')
+    local pipelines=$(ci_curl_get "pipelines?$1" "NODEBUG" | tr -d '[]' |sed 's/{"id":/|/g')
     IFS='|' read -a pipelines_list <<<"${pipelines}"
     for pipeline in "${pipelines_list[@]}"; do
         [[ -z "${pipeline}" ]] && continue
