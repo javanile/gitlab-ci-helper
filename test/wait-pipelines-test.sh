@@ -3,4 +3,4 @@ set -e -o allexport
 
 source ./test/bootstrap.sh
 
-bash ./gitlab-ci-helper.sh wait:pipelines
+bash ./gitlab-ci-helper.sh wait:pipelines status=pending

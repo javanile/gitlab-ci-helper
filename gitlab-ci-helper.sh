@@ -280,15 +280,19 @@ ci_list_pipelines () {
 ##
 ci_wait_pipelines () {
     #[[ -z "$1" ]] && error "Missing target branch"
-    local pipelines=$(ci_curl_get "pipelines?$1" "NODEBUG" | tr -d '[]' |sed 's/{"id":/|/g')
-    IFS='|' read -a pipelines_list <<<"${pipelines}"
-    for pipeline in "${pipelines_list[@]}"; do
-        [[ -z "${pipeline}" ]] && continue
-        pipeline_id=$(echo ${pipeline} | cut -d',' -f1)
-        echo "PID: ${pipeline_id}"
+    local pipelines_count=1
+    while [[ "${pipelines_count}" -ne "0" ]]; do
+        local pipelines=$(ci_curl_get "pipelines?$1" "NODEBUG" | tr -d '[]' | sed 's/{"id":/|/g')
+        IFS='|' read -a pipelines_list <<<"${pipelines}"
+        for pipeline in "${pipelines_list[@]}"; do
+            [[ -z "${pipeline}" ]] && continue
+            pipeline_id=$(echo ${pipeline} | cut -d',' -f1)
+            [[ "${pipeline_id}" = "${CI_PIPELINE_ID}" ]] && continue
+            pipelines_count=$((pipelines_count + 1))
+            echo "PID: ${pipeline_id}"
+            sleep 1
+        done
     done
-
-    #    echo ${pipelines}
 }
 
 ##
