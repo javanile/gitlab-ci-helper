@@ -282,15 +282,19 @@ ci_wait_pipelines () {
     #[[ -z "$1" ]] && error "Missing target branch"
     local pipelines_count=1
     while [[ "${pipelines_count}" -ne "0" ]]; do
+        pipelines_count=0
+        #echo "PC: ${pipelines_count}"
         local pipelines=$(ci_curl_get "pipelines?$1" "NODEBUG" | tr -d '[]' | sed 's/{"id":/|/g')
         IFS='|' read -a pipelines_list <<<"${pipelines}"
         for pipeline in "${pipelines_list[@]}"; do
             [[ -z "${pipeline}" ]] && continue
             pipeline_id=$(echo ${pipeline} | cut -d',' -f1)
+            pipeline_ref=$(echo ${pipeline} | cut -d'"' -f8)
+            pipeline_status=$(echo ${pipeline} | cut -d'"' -f12)
             [[ "${pipeline_id}" = "${CI_PIPELINE_ID}" ]] && continue
             pipelines_count=$((pipelines_count + 1))
-            echo "PID: ${pipeline_id}"
-            sleep 1
+            echo "[${pipeline_ref}] Wait until the Pipeline #${pipeline_id} with status '${pipeline_status}' will be overcome..."
+            sleep 5
         done
     done
 }
