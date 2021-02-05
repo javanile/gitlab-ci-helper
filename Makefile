@@ -31,3 +31,9 @@ test-list-pipelines:
 
 test-wait-pipelines:
 	@bash test/wait-pipelines-test.sh
+
+test-git-clone:
+	@bash test/git-clone-test.sh
+
+test-git-snapshot:
+	@bash test/git-snapshot-test.sh

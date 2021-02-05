@@ -301,6 +301,31 @@ ci_wait_pipelines () {
 }
 
 ##
+# Clone single current branch.
+#
+# Ref: https://stackoverflow.com/questions/1911109/how-do-i-clone-a-specific-git-branch
+##
+ci_git_clone() {
+    [[ -z "$1" ]] && error "Missing clone directory"
+
+    git clone --single-branch --branch "${current_branch}" "git@gitlab.com:${CI_PROJECT_PATH}.git" "$1"
+}
+
+##
+# Accept merge request.
+#
+# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+##
+ci_git_snapshot() {
+    [[ -z "$1" ]] && error "Missing commit message"
+
+    git pull
+    git add .
+    git commit -am "$1" && true
+    git push
+}
+
+##
 # Exit with a message
 ##
 ci_fail() {
@@ -347,6 +372,12 @@ main () {
             ;;
         wait:pipelines)
             ci_wait_pipelines "$2"
+            ;;
+        git:clone)
+            ci_git_clone "$2"
+            ;;
+        git:snapshot)
+            ci_git_snapshot "$2"
             ;;
         fail)
             ci_fail
