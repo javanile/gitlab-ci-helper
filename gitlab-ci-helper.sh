@@ -43,6 +43,7 @@ usage () {
     echo ""
     echo "List of available options"
     echo "  -b, --branch BRANCH      Set current branch"
+    echo "  -t, --tag TAG            Set current tag"
     echo "  -h, --help               Display this help and exit"
     echo "  -v, --version            Display current version"
     echo ""
@@ -50,14 +51,16 @@ usage () {
 }
 
 debug=
+current_tag=
 current_branch="${CI_COMMIT_BRANCH}"
-options=$(getopt -n gitlab-ci-helper.sh -o b:dvh -l branch:,debug,version,help -- "$@")
+options=$(getopt -n gitlab-ci-helper.sh -o t:b:dvh -l tag:,branch:,debug,version,help -- "$@")
 
 eval set -- "${options}"
 
 while true; do
     case "$1" in
         -d|--debug) debug=1 ;;
+        -t|--tag) shift; current_tag=$1 ;;
         -b|--branch) shift; current_branch=$1 ;;
         -v|--version) echo "GitLab CI Helper [0.0.1] - by Francesco Bianco <bianco@javanile.org>"; exit ;;
         -h|--help) usage; exit ;;
@@ -323,6 +326,12 @@ ci_git_snapshot() {
     git add .
     git commit -am "$1" && true
     git push
+
+    if [[ -n "${current_tag}" ]]; then
+        git pull
+        git tag -f -a "${current_tag}" -m "$1"
+        git push origin "${current_tag}" -f --tags
+    fi
 }
 
 ##
