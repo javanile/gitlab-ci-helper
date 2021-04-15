@@ -149,7 +149,7 @@ ci_curl_catch() {
             echo ""
             ;;
         22)
-            ci_curl_catch_status
+            ci_curl_catch_status $1
             ;;
         *)
             ci_curl_error
