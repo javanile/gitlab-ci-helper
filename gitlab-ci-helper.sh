@@ -234,6 +234,17 @@ ci_create_merge_request () {
         \"target_branch\": \"$1\",
         \"title\": \"$2\"
     }"
+
+    if [[ "${CI_CURL_HTTP_STATUS}" = "409" ]]; then
+        local merge_request=$(ci_curl_get "merge_requests?state=opened&source_branch=${current_branch}&target_branch=$1")
+        local iid=$(echo ${merge_request} | sed -n 's|.*"iid":\([^",]*\).*|\1|p')
+
+        if [[ -n "${iid}" ]]; then
+            ci_curl_post "merge_requests/${iid}" "{
+                \"title\": \"$2\"
+            }"
+        fi
+    fi
 }
 
 ##
