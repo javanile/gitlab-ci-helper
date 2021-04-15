@@ -125,7 +125,7 @@ ci_curl_post() {
 # Call CURL POST request to GitLab API.
 ##
 ci_curl_put() {
-    CI_CURL_HTTP_STATUS=200
+    ci_curl_init
 
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
@@ -240,7 +240,7 @@ ci_create_merge_request () {
         local iid=$(echo ${merge_request} | sed -n 's|.*"iid":\([^",]*\).*|\1|p')
 
         if [[ -n "${iid}" ]]; then
-            ci_curl_post "merge_requests/${iid}" "{
+            ci_curl_put "merge_requests/${iid}" "{
                 \"title\": \"$2\"
             }"
         fi
