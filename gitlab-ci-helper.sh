@@ -232,7 +232,8 @@ ci_create_merge_request () {
     ci_curl_post "merge_requests" "{
         \"source_branch\": \"${current_branch}\",
         \"target_branch\": \"$1\",
-        \"title\": \"$2\"
+        \"title\": \"$2\",
+        \"description\": \"$2\"
     }"
 
     if [[ "${CI_CURL_HTTP_STATUS}" = "409" ]]; then
@@ -241,7 +242,8 @@ ci_create_merge_request () {
 
         if [[ -n "${iid}" ]]; then
             ci_curl_put "merge_requests/${iid}" "{
-                \"title\": \"$2\"
+                \"title\": \"$2\",
+                \"description\": \"$2\"
             }"
         fi
     fi
