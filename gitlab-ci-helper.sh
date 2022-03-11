@@ -36,14 +36,17 @@ usage () {
     echo "Support your CI workflow with useful macro."
     echo ""
     echo "List of available commands"
+    echo "  create:mr REF TITLE           Create merge request with target REF and TITLE"
     echo "  create:branch NAME REF        Create new branch with NAME from REF"
     echo "  create:file NAME CONTENT      Create new file with NAME and CONTENT into BRANCH"
+    echo "  update:file NAME CONTENT      Update file CONTENT by NAME and into current BRANCH"
     echo "  list:pipelines                Create new file with NAME and CONTENT into BRANCH"
     echo "  info                          Create new file with NAME and CONTENT into BRANCH"
     echo ""
     echo "List of available options"
     echo "  -b, --branch BRANCH      Set current branch"
     echo "  -t, --tag TAG            Set current tag"
+    echo "  -c, --close              Close merge request with no changes"
     echo "  -h, --help               Display this help and exit"
     echo "  -v, --version            Display current version"
     echo ""
@@ -51,15 +54,17 @@ usage () {
 }
 
 debug=
+close=
 current_tag=
 current_branch="${CI_COMMIT_BRANCH}"
-options=$(getopt -n gitlab-ci-helper.sh -o t:b:dvh -l tag:,branch:,debug,version,help -- "$@")
+options=$(getopt -n gitlab-ci-helper.sh -o t:b:cdvh -l tag:,branch:,close,debug,version,help -- "$@")
 
 eval set -- "${options}"
 
 while true; do
     case "$1" in
         -d|--debug) debug=1 ;;
+        -c|--close) close=1 ;;
         -t|--tag) shift; current_tag=$1 ;;
         -b|--branch) shift; current_branch=$1 ;;
         -v|--version) echo "GitLab CI Helper [0.0.1] - by Francesco Bianco <bianco@javanile.org>"; exit ;;
@@ -111,7 +116,10 @@ ci_curl_post() {
 
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
-    [[ -n "${debug}" ]] && echo " --> POST ${url}"
+    if [[ -n "${debug}" ]]; then
+        echo " --> POST ${url}"
+        echo "     $2"
+    fi
 
     curl -XPOST -fsSL ${url} \
          -H "Content-Type: application/json" \
@@ -129,7 +137,10 @@ ci_curl_put() {
 
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
-    [[ -n "${debug}" ]] && echo " --> PUT ${url}"
+    if [[ -n "${debug}" ]]; then
+        echo " --> PUT ${url}"
+        echo "     $2"
+    fi
 
     curl -XPUT -fsSL ${url} \
          -H "Content-Type: application/json" \
@@ -144,9 +155,10 @@ ci_curl_put() {
 ##
 ci_curl_catch() {
     CI_CURL_EXIT_CODE=$1
+
     case "$1" in
         0)
-            echo ""
+            ci_curl_catch_success
             ;;
         22)
             ci_curl_catch_status $1
@@ -155,6 +167,19 @@ ci_curl_catch() {
             ci_curl_error
             ;;
     esac
+}
+
+##
+# Call CURL POST request to GitLab API.
+##
+ci_curl_catch_success() {
+    echo ""
+    if [[ -s CI_CURL_ERROR_MESSAGE ]]; then
+        echo -n "[Warning] "
+        cat CI_CURL_ERROR_MESSAGE
+    else
+        rm -f CI_CURL_ERROR_MESSAGE
+    fi
 }
 
 ##
@@ -221,6 +246,40 @@ ci_create_file () {
 }
 
 ##
+# Update an existing file if not exists on current branch.
+#
+# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+##
+ci_update_file () {
+    [[ -z "$1" ]] && error "Missing file name"
+    [[ -z "$2" ]] && error "Missing file content"
+    #[[ -z "$3" ]] && error "Missing branch name"
+
+    #ci_check_branch "${current_branch}"
+
+    ci_curl_put "repository/files/$1" "{
+        \"branch\": \"${current_branch}\",
+        \"content\": \"$2\",
+        \"commit_message\": \"Update file $1\"
+    }"
+}
+
+##
+# Create a new file if not exists on current branch.
+#
+# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+##
+ci_opened_merge_request () {
+    [[ -z "$1" ]] && error "Missing source branch"
+    [[ -z "$2" ]] && error "Missing target branch"
+
+    local merge_request=$(ci_curl_get "merge_requests?state=opened&source_branch=$1&target_branch=$2")
+    local iid=$(echo ${merge_request} | sed -n 's|.*"iid":\([^",]*\).*|\1|p')
+
+    echo "$iid"
+}
+
+##
 # Create a new file if not exists on current branch.
 #
 # Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
@@ -237,14 +296,23 @@ ci_create_merge_request () {
     }"
 
     if [[ "${CI_CURL_HTTP_STATUS}" = "409" ]]; then
-        local merge_request=$(ci_curl_get "merge_requests?state=opened&source_branch=${current_branch}&target_branch=$1")
-        local iid=$(echo ${merge_request} | sed -n 's|.*"iid":\([^",]*\).*|\1|p')
-
+        local iid=$(ci_opened_merge_request "${current_branch}" "$1")
         if [[ -n "${iid}" ]]; then
             ci_curl_put "merge_requests/${iid}" "{
                 \"title\": \"$2\",
                 \"description\": \"$2\"
             }"
+        fi
+    fi
+
+    if [[ -n "${close}" ]]; then
+        local iid=$(ci_opened_merge_request "${current_branch}" "$1")
+        if [[ -n "${iid}" ]]; then
+            local merge_request=$(ci_curl_get "merge_requests/${iid}")
+            local changes_count=$(echo ${merge_request} | sed -n 's|.*"changes_count":\([^,]*\).*|\1|p' | sed 's/[^0-9]*//g')
+            if [[ -z "$changes_count" || "$changes_count" = "0" ]]; then
+                ci_curl_put "merge_requests/${iid}" "{\"state_event\": \"close\"}"
+            fi
         fi
     fi
 }
@@ -257,8 +325,7 @@ ci_create_merge_request () {
 ci_accept_merge_request () {
     [[ -z "$1" ]] && error "Missing target branch"
 
-    local merge_request=$(ci_curl_get "merge_requests?state=opened&source_branch=${current_branch}&target_branch=$1")
-    local iid=$(echo ${merge_request} | sed -n 's|.*"iid":\([^",]*\).*|\1|p')
+    local iid=$(ci_opened_merge_request "${current_branch}" "$1")
 
     [[ -z "${iid}" ]] && error "Merge request not found from '${current_branch}' to '$1' branch"
 
@@ -275,6 +342,7 @@ ci_accept_merge_request () {
     fi
 
     if [[ "${CI_CURL_HTTP_STATUS}" = "406" ]]; then
+        [[ -n "${debug}" ]] && echo "[Warning] Waiting before accepting merge request '${iid}' due server operations."
         sleep 60
         ci_curl_put "merge_requests/${iid}/merge"
         [[ "${CI_CURL_HTTP_STATUS}" = "406" ]] && ci_fail "There are merge conflicts, perform manual operation." || true
@@ -386,6 +454,9 @@ main () {
             ;;
         create:file)
             ci_create_file "$2" "$3"
+            ;;
+        update:file)
+            ci_update_file "$2" "$3"
             ;;
         create:merge-request|create:mr)
             ci_create_merge_request "$2" "$3"

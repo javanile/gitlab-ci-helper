@@ -1,11 +1,15 @@
 
 .PHONY: test
 
-push:
+init: editorconfig
+
+editorconfig:
+	@curl -so .editorconfig https://editorconfig.javanile.org/lib/bash
+
+release:
 	git config credential.helper 'cache --timeout=3600'
-	date > PUSH
 	git add .
-	git commit -am "push"
+	git commit -am "Prepare Release 0.$$(date +%y.%U)"
 	git push
 
 ## -------
@@ -20,11 +24,17 @@ test-release: push
 test-accept-merge-request:
 	bash test/accept-merge-request-test.sh
 
+test-create-merge-request:
+	bash test/create-merge-request-test.sh
+
 test-check-branch:
 	@bash test/check-branch-test.sh
 
 test-create-file:
 	@bash test/create-file-test.sh
+
+test-update-file:
+	@bash test/update-file-test.sh
 
 test-list-pipelines:
 	@bash test/list-pipelines-test.sh
@@ -37,3 +47,6 @@ test-git-clone:
 
 test-git-snapshot:
 	@bash test/git-snapshot-test.sh
+
+test-help:
+	@bash gitlab-ci-helper.sh --help
