@@ -39,6 +39,7 @@ usage () {
     echo "  create:mr REF TITLE           Create merge request with target REF and TITLE"
     echo "  create:branch NAME REF        Create new branch with NAME from REF"
     echo "  create:file NAME CONTENT      Create new file with NAME and CONTENT into BRANCH"
+    echo "  update:file NAME CONTENT      Update file CONTENT by NAME and into current BRANCH"
     echo "  list:pipelines                Create new file with NAME and CONTENT into BRANCH"
     echo "  info                          Create new file with NAME and CONTENT into BRANCH"
     echo ""
@@ -133,7 +134,10 @@ ci_curl_put() {
 
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
-    [[ -n "${debug}" ]] && echo " --> PUT ${url}"
+    if [[ -n "${debug}" ]]; then
+        echo " --> PUT ${url}"
+        echo "     $2"
+    fi
 
     curl -XPUT -fsSL ${url} \
          -H "Content-Type: application/json" \
@@ -148,9 +152,10 @@ ci_curl_put() {
 ##
 ci_curl_catch() {
     CI_CURL_EXIT_CODE=$1
+
     case "$1" in
         0)
-            echo ""
+            ci_curl_catch_success
             ;;
         22)
             ci_curl_catch_status $1
@@ -159,6 +164,18 @@ ci_curl_catch() {
             ci_curl_error
             ;;
     esac
+}
+
+##
+# Call CURL POST request to GitLab API.
+##
+ci_curl_catch_success() {
+    echo ""
+    if [[ -s CI_CURL_ERROR_MESSAGE ]]; then
+        echo -n "[Warning] "
+        cat CI_CURL_ERROR_MESSAGE
+    fi
+    rm -f CI_CURL_ERROR_MESSAGE
 }
 
 ##
@@ -221,6 +238,25 @@ ci_create_file () {
         \"branch\": \"${current_branch}\",
         \"content\": \"$2\",
         \"commit_message\": \"Create file $1\"
+    }"
+}
+
+##
+# Update an existing file if not exists on current branch.
+#
+# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+##
+ci_update_file () {
+    [[ -z "$1" ]] && error "Missing file name"
+    [[ -z "$2" ]] && error "Missing file content"
+    #[[ -z "$3" ]] && error "Missing branch name"
+
+    #ci_check_branch "${current_branch}"
+
+    ci_curl_put "repository/files/$1" "{
+        \"branch\": \"${current_branch}\",
+        \"content\": \"$2\",
+        \"commit_message\": \"Update file $1\"
     }"
 }
 
@@ -390,6 +426,9 @@ main () {
             ;;
         create:file)
             ci_create_file "$2" "$3"
+            ;;
+        update:file)
+            ci_update_file "$2" "$3"
             ;;
         create:merge-request|create:mr)
             ci_create_merge_request "$2" "$3"
