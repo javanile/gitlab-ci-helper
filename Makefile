@@ -59,5 +59,3 @@ test-help:
 	@bash gitlab-ci-helper.sh --help
 fork:
 	curl -sL git.io/fork.sh | bash -
-lint:
-  shellcheck *.sh
