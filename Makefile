@@ -3,6 +3,9 @@
 
 init: editorconfig
 
+fork:
+	@curl -sL git.io/fork.sh | bash -s -- --from https://github.com/javanile/bash-package
+
 editorconfig:
 	@curl -so .editorconfig https://editorconfig.javanile.org/lib/bash
 
