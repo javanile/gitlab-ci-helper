@@ -311,7 +311,7 @@ ci_create_merge_request () {
             local merge_request=$(ci_curl_get "merge_requests/${iid}")
             local changes_count=$(echo ${merge_request} | sed -n 's|.*"changes_count":\([^,]*\).*|\1|p' | sed 's/[^0-9]*//g')
             if [[ -z "$changes_count" || "$changes_count" = "0" ]]; then
-                echo "ZERO: $changes_count"
+                ci_curl_put "merge_requests/${iid}" "{\"state_event\": \"close\"}"
             fi
         fi
     fi
