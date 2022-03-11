@@ -9,7 +9,7 @@ editorconfig:
 push:
 	git config credential.helper 'cache --timeout=3600'
 	git add .
-	git commit -am "Prepare Release 0.$(date +%y.%U)"
+	git commit -am "Prepare Release 0.$$(date +%y.%U)"
 	git push
 
 ## -------
