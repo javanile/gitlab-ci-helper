@@ -6,7 +6,7 @@ init: editorconfig
 editorconfig:
 	@curl -so .editorconfig https://editorconfig.javanile.org/lib/bash
 
-push:
+release:
 	git config credential.helper 'cache --timeout=3600'
 	git add .
 	git commit -am "Prepare Release 0.$$(date +%y.%U)"
