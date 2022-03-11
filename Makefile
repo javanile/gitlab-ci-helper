@@ -20,6 +20,9 @@ test-release: push
 test-accept-merge-request:
 	bash test/accept-merge-request-test.sh
 
+test-create-merge-request:
+	bash test/create-merge-request-test.sh
+
 test-check-branch:
 	@bash test/check-branch-test.sh
 
@@ -37,3 +40,6 @@ test-git-clone:
 
 test-git-snapshot:
 	@bash test/git-snapshot-test.sh
+
+test-help:
+	@bash gitlab-ci-helper.sh --help

@@ -36,6 +36,7 @@ usage () {
     echo "Support your CI workflow with useful macro."
     echo ""
     echo "List of available commands"
+    echo "  create:mr REF TITLE           Create merge request with target REF and TITLE"
     echo "  create:branch NAME REF        Create new branch with NAME from REF"
     echo "  create:file NAME CONTENT      Create new file with NAME and CONTENT into BRANCH"
     echo "  list:pipelines                Create new file with NAME and CONTENT into BRANCH"
@@ -111,7 +112,10 @@ ci_curl_post() {
 
     local url="${GITLAB_PROJECTS_API_URL}/${CI_CURRENT_PROJECT_SLUG}/$1"
 
-    [[ -n "${debug}" ]] && echo " --> POST ${url}"
+    if [[ -n "${debug}" ]]; then
+        echo " --> POST ${url}"
+        echo "     $2"
+    fi
 
     curl -XPOST -fsSL ${url} \
          -H "Content-Type: application/json" \
