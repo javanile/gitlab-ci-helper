@@ -1,11 +1,15 @@
 
 .PHONY: test
 
+init: editorconfig
+
+editorconfig:
+	@curl -so .editorconfig https://editorconfig.javanile.org/lib/bash
+
 push:
 	git config credential.helper 'cache --timeout=3600'
-	date > PUSH
 	git add .
-	git commit -am "push"
+	git commit -am "Prepare release 0.$(date +%y.%U)"
 	git push
 
 ## -------
