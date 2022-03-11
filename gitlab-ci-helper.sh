@@ -46,6 +46,7 @@ usage () {
     echo "List of available options"
     echo "  -b, --branch BRANCH      Set current branch"
     echo "  -t, --tag TAG            Set current tag"
+    echo "  -c, --close              Close merge request with no changes"
     echo "  -h, --help               Display this help and exit"
     echo "  -v, --version            Display current version"
     echo ""
@@ -53,15 +54,17 @@ usage () {
 }
 
 debug=
+close=
 current_tag=
 current_branch="${CI_COMMIT_BRANCH}"
-options=$(getopt -n gitlab-ci-helper.sh -o t:b:dvh -l tag:,branch:,debug,version,help -- "$@")
+options=$(getopt -n gitlab-ci-helper.sh -o t:b:cdvh -l tag:,branch:,close,debug,version,help -- "$@")
 
 eval set -- "${options}"
 
 while true; do
     case "$1" in
         -d|--debug) debug=1 ;;
+        -c|--close) close=1 ;;
         -t|--tag) shift; current_tag=$1 ;;
         -b|--branch) shift; current_branch=$1 ;;
         -v|--version) echo "GitLab CI Helper [0.0.1] - by Francesco Bianco <bianco@javanile.org>"; exit ;;
@@ -174,8 +177,9 @@ ci_curl_catch_success() {
     if [[ -s CI_CURL_ERROR_MESSAGE ]]; then
         echo -n "[Warning] "
         cat CI_CURL_ERROR_MESSAGE
+    else
+        rm -f CI_CURL_ERROR_MESSAGE
     fi
-    rm -f CI_CURL_ERROR_MESSAGE
 }
 
 ##
@@ -265,6 +269,21 @@ ci_update_file () {
 #
 # Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
 ##
+ci_opened_merge_request () {
+    [[ -z "$1" ]] && error "Missing source branch"
+    [[ -z "$2" ]] && error "Missing target branch"
+
+    local merge_request=$(ci_curl_get "merge_requests?state=opened&source_branch=$1&target_branch=$2")
+    local iid=$(echo ${merge_request} | sed -n 's|.*"iid":\([^",]*\).*|\1|p')
+
+    echo "$iid"
+}
+
+##
+# Create a new file if not exists on current branch.
+#
+# Ref: https://docs.gitlab.com/ee/api/branches.html#create-repository-branch
+##
 ci_create_merge_request () {
     [[ -z "$1" ]] && error "Missing target branch"
     [[ -z "$2" ]] && error "Missing merge request title"
@@ -277,14 +296,23 @@ ci_create_merge_request () {
     }"
 
     if [[ "${CI_CURL_HTTP_STATUS}" = "409" ]]; then
-        local merge_request=$(ci_curl_get "merge_requests?state=opened&source_branch=${current_branch}&target_branch=$1")
-        local iid=$(echo ${merge_request} | sed -n 's|.*"iid":\([^",]*\).*|\1|p')
-
+        local iid=$(ci_opened_merge_request "${current_branch}" "$1")
         if [[ -n "${iid}" ]]; then
             ci_curl_put "merge_requests/${iid}" "{
                 \"title\": \"$2\",
                 \"description\": \"$2\"
             }"
+        fi
+    fi
+
+    if [[ -n "${close}" ]]; then
+        local iid=$(ci_opened_merge_request "${current_branch}" "$1")
+        if [[ -n "${iid}" ]]; then
+            local merge_request=$(ci_curl_get "merge_requests/${iid}")
+            local changes_count=$(echo ${merge_request} | sed -n 's|.*"changes_count":\([^,]*\).*|\1|p' | sed 's/[^0-9]*//g')
+            if [[ -z "$changes_count" || "$changes_count" = "0" ]]; then
+                echo "ZERO: $changes_count"
+            fi
         fi
     fi
 }
@@ -297,8 +325,7 @@ ci_create_merge_request () {
 ci_accept_merge_request () {
     [[ -z "$1" ]] && error "Missing target branch"
 
-    local merge_request=$(ci_curl_get "merge_requests?state=opened&source_branch=${current_branch}&target_branch=$1")
-    local iid=$(echo ${merge_request} | sed -n 's|.*"iid":\([^",]*\).*|\1|p')
+    local iid=$(ci_opened_merge_request "${current_branch}" "$1")
 
     [[ -z "${iid}" ]] && error "Merge request not found from '${current_branch}' to '$1' branch"
 
