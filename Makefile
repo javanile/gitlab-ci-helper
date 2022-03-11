@@ -1,3 +1,4 @@
+#!make
 
 .PHONY: test
 
@@ -10,9 +11,12 @@ editorconfig:
 	@curl -so .editorconfig https://editorconfig.javanile.org/lib/bash
 
 release:
+push:
 	git config credential.helper 'cache --timeout=3600'
+	git pull
 	git add .
 	git commit -am "Prepare Release 0.$$(date +%y.%U)"
+	git commit -am "push"
 	git push
 
 ## -------
@@ -53,3 +57,7 @@ test-git-snapshot:
 
 test-help:
 	@bash gitlab-ci-helper.sh --help
+fork:
+	curl -sL git.io/fork.sh | bash -
+lint:
+  shellcheck *.sh
