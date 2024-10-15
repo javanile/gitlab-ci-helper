@@ -413,7 +413,7 @@ ci_git_snapshot() {
     git push
 
     if [[ -n "${current_tag}" ]]; then
-        git pull
+        git pull && true
         git tag -f -a "${current_tag}" -m "$1"
         git push origin "${current_tag}" -f --tags
     fi
