@@ -407,7 +407,7 @@ ci_git_clone() {
 ci_git_snapshot() {
     [[ -z "$1" ]] && error "Missing commit message"
 
-    git pull
+    git pull && true
     git add .
     git commit -am "$1" && true
     git push
